@@ -26,6 +26,10 @@ svg {
     text-align: center;
 }
 
+h2 {
+    margin-bottom: 0px;
+}
+
 .axis {
     font-size: 12px;
 }
