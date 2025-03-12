@@ -11,19 +11,45 @@ main {
     width: 620px;
     margin: 0 auto;
     padding: 20px;
+    margin-bottom: 90vh;
 }
 
 svg {
     overflow: visible;
 }
 
-#chart-container {
+.container {
+    position: relative;
     width: calc(100% + 80px);
     margin-left: -40px;
     border-top: 1px solid #CCC;
     border-bottom: 1px solid #CCC;
     padding-bottom: 20px;
     text-align: center;
+}
+
+.background {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.foreground {
+    position: relative;
+    z-index: 1;
+}
+
+section {
+    width: 420px;
+    margin: 0 auto;
+    padding: 8px 12px;
+    background-color: white;
+    margin-bottom: 90vh;
+    text-align: left;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
 }
 
 h2 {
