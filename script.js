@@ -54,27 +54,50 @@ circles.transition()
 const container = d3.select("#chart").node()
 container.prepend(svg.node())
 
-const inputElement = d3.select("#group-select").node()
-inputElement.addEventListener("change", (event) => {
-    const grouping = event.target.value
+let currentStep = 0;
 
-    switch (grouping) {
-        case "category":
-        case "gender":
-            clusteredLayout(nodes, grouping)
+const observer = new IntersectionObserver(callback, {
+    rootMargin: "0px",
+    threshold: 1.0,
+});
+
+const sections = document.querySelectorAll("section");
+sections.forEach((section) => {
+    observer.observe(section);
+})
+
+function callback(entries) {
+    entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+            const section = entry.target;
+            const index = Array.from(sections).indexOf(section);
+            if (index !== currentStep) {
+                updateLayoutForStep(index);
+                currentStep = index;
+            }
+        }
+    });
+}
+
+function updateLayoutForStep(step) {
+    switch (step) {
+        case 1:
+            clusteredLayout(nodes, "category")
+            break;
+        case 2:
+            clusteredLayout(nodes, "gender")
             break;
         default:
             initialLayout(nodes)
             break;
     }
 
-    circles.transition()
+    circles.interrupt().transition()
         .duration(750)
         .delay(() => Math.random() * 300)
         .attr("cx", d => d.x)
         .attr("cy", d => d.y)
-});
-
+}
 
 function initialLayout(nodes) {
     // ensure that node.x and node.y are not set
