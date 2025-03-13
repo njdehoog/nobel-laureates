@@ -22,7 +22,9 @@ const svg = d3
     .attr("width", width)
     .attr("height", height)
 
-const colorScale = d3.scaleOrdinal(d3.range(6), d3.schemeCategory10)
+const categories = Array.from(new Set(data.map(d => d.category)))
+
+const colorScale = d3.scaleOrdinal(categories, d3.schemeTableau10)
 
 const nodes = data.map((d, index) => {
     return {
@@ -41,7 +43,7 @@ const circles = svg.append("g")
     .attr("r", 0)
     .attr("cx", d => d.x)
     .attr("cy", d => d.y)
-    .attr("fill", d => colorScale(d.data.category));
+    .attr("fill", "#CCC");
 
 circles.transition()
     .delay(() => Math.random() * 500)
@@ -50,6 +52,31 @@ circles.transition()
         const i = d3.interpolate(0, d.r);
         return t => d.r = i(t);
     });
+
+
+const categoryLabels = svg.append("g")
+    .selectAll("text")
+    .data(categories)
+    .join("text")
+    .attr("fill", "#333")
+    .attr("opacity", 0)
+    .attr("font-size", "16px")
+    .attr("font-weight", "bold")
+    .attr("text-anchor", "middle")
+    .attr("style", "filter: drop-shadow(1px 1px 2px rgb(255 255 255)) drop-shadow(-1px -1px 2px rgb(255 255 255)) drop-shadow(-1px 1px 2px rgb(255 255 255)) drop-shadow(1px -1px 2px rgb(255 255 255))")
+    .text(d => d)
+
+const genderLabels = svg.append("g")
+    .selectAll("text")
+    .data(Array.from(new Set(data.map(d => d.gender))))
+    .join("text")
+    .attr("fill", "#333")
+    .attr("opacity", 0)
+    .attr("font-size", "16px")
+    .attr("font-weight", "bold")
+    .attr("text-anchor", "middle")
+    .attr("style", "filter: drop-shadow(1px 1px 2px rgb(255 255 255)) drop-shadow(-1px -1px 2px rgb(255 255 255)) drop-shadow(-1px 1px 2px rgb(255 255 255)) drop-shadow(1px -1px 2px rgb(255 255 255))")
+    .text(d => d.charAt(0).toUpperCase() + d.slice(1))
 
 const container = d3.select("#chart").node()
 container.prepend(svg.node())
@@ -80,23 +107,63 @@ function callback(entries) {
 }
 
 function updateLayoutForStep(step) {
+    let grouping;
+
     switch (step) {
         case 1:
-            clusteredLayout(nodes, "category")
+            grouping = "category"
             break;
         case 2:
-            clusteredLayout(nodes, "gender")
+            grouping = "gender"
             break;
         default:
-            initialLayout(nodes)
             break;
     }
 
-    circles.interrupt().transition()
+    let fill = "#CCC"
+    let centroids;
+
+    if (grouping) {
+        const layout = clusteredLayout(nodes, grouping)
+        centroids = layout.centroids
+
+        if (grouping === "category") {
+            categoryLabels
+                .attr("x", d => centroids.get(d).x)
+                .attr("y", d => centroids.get(d).y)
+        } else {
+            genderLabels
+                .attr("x", d => centroids.get(d).x)
+                .attr("y", d => centroids.get(d).y)
+        }
+
+        fill = d => colorScale(d.data.category)
+    } else {
+        initialLayout(nodes)
+    }
+
+    circles.interrupt()
+        .transition()
         .duration(750)
         .delay(() => Math.random() * 300)
         .attr("cx", d => d.x)
         .attr("cy", d => d.y)
+        .attr("r", d => d.r)
+        .attr("fill", fill);
+
+    showAndHideLabelsForStep(step)
+}
+
+function showAndHideLabelsForStep(step) {
+    categoryLabels.interrupt()
+        .transition()
+        .duration(750)
+        .attr("opacity", step === 1 ? 1 : 0)
+
+    genderLabels.interrupt()
+        .transition()
+        .duration(750)
+        .attr("opacity", step === 2 ? 1 : 0)
 }
 
 function initialLayout(nodes) {
@@ -113,6 +180,7 @@ function initialLayout(nodes) {
     nodes.forEach((node) => {
         node.x = node.x + center.x;
         node.y = node.y + center.y;
+        node.r = circleRadius;
     });
 
     return nodes;
@@ -137,7 +205,24 @@ function clusteredLayout(nodes, grouping) {
         node.y = leaf.y
     })
 
-    return nodes;
+    const centroids = d3.rollup(leaves, centroid, d => {
+        return d.parent.data[0]
+    });
+
+    return { nodes, centroids };
+}
+
+function centroid(nodes) {
+    let x = 0;
+    let y = 0;
+    let z = 0;
+    for (const d of nodes) {
+        let k = d.r ** 2;
+        x += d.x * k;
+        y += d.y * k;
+        z += k;
+    }
+    return { x: x / z, y: y / z };
 }
 
 
